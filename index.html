@@ -269,7 +269,7 @@ async function analyzeWithEssentia(){
     const frame = frames.get(i);
     const windowed = essentia.Windowing(frame, true, frameSize, 'hann');
     const spec = essentia.Spectrum(windowed.frame, frameSize);
-    const peaks = essentia.SpectralPeaks(spec.spectrum, 0, 5000, 100, 0, 'frequency', sr);
+   const peaks = essentia.SpectralPeaks(spec.spectrum);
     const hpcp = essentia.HPCP(peaks.frequencies, peaks.magnitudes);
     hpcpFrames.push(essentia.vectorToArray(hpcp.hpcp));
  
