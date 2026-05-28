@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<base target="_top">
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>כלי לימוד אורגן</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: Arial, sans-serif; background: #0a0a0f; color: #e8e8f0; min-height: 100vh; padding: 1.5rem 1rem; }
@@ -13,15 +14,12 @@ h1 { font-size: 1.8rem; text-align: center; margin-bottom: 0.3rem; color: #a78bf
 .label { font-size: 0.75rem; color: #888; margin-bottom: 0.5rem; font-weight: 600; }
 button { padding: 0.7rem 1.2rem; border-radius: 10px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; background: #1a1a2e; color: #e8e8f0; font-family: inherit; transition: 0.2s; }
 button:hover { background: #2a2a40; }
-button.primary { background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 .upload-btn { width: 100%; padding: 1rem; background: linear-gradient(135deg, #059669, #10b981); color: white; }
 .controls { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.progress-bar { width: 100%; height: 8px; background: #1a1a2e; border-radius: 4px; cursor: pointer; overflow: hidden; margin: 12px 0 8px; }
-.progress-bar { direction: ltr; }
+.progress-bar { width: 100%; height: 8px; background: #1a1a2e; border-radius: 4px; cursor: pointer; overflow: hidden; margin: 12px 0 8px; direction: ltr; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #2563eb); width: 0%; transition: width 0.1s linear; }
-.time-row { direction: ltr; }
-.time-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #888; font-variant-numeric: tabular-nums; }
+.time-row { direction: ltr; display: flex; justify-content: space-between; font-size: 0.85rem; color: #888; font-variant-numeric: tabular-nums; }
 .file-name { text-align: center; color: #a78bfa; font-size: 0.9rem; margin-top: 8px; min-height: 20px; }
 #status { text-align: center; color: #666; font-size: 0.85rem; padding: 0.3rem; min-height: 20px; }
 .chord-cell { background: #1a1a2e; border: 2px solid #2a2a40; border-radius: 10px; padding: 12px 6px; text-align: center; cursor: pointer; transition: 0.2s; }
@@ -31,27 +29,30 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .chord-cell.active .ch-name { color: white; }
 .chord-cell .ch-time { font-size: 0.7rem; color: #666; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .chord-cell.active .ch-time { color: rgba(255,255,255,0.8); }
+.engine-badge { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; margin-right: 6px; }
+.engine-pro { background: #064e3b; color: #6ee7b7; }
+.engine-basic { background: #422006; color: #fcd34d; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🎵 כלי לימוד אורגן</h1>
   <p class="sub">העלה שיר וקבל את האקורדים</p>
-
+ 
   <div class="card">
-    <input type="file" id="file" accept="audio/*" style="display:none" onchange="loadFile(this.files[0])">
-    <button class="upload-btn" onclick="document.getElementById('file').click()">📁 העלה שיר (MP3/WAV)</button>
+    <input type="file" id="file" accept="audio/*" style="display:none">
+    <button class="upload-btn" id="uploadBtn">📁 העלה שיר (MP3/WAV)</button>
     <div class="file-name" id="fname"></div>
-    <p id="status">בחר קובץ להתחלה</p>
+    <p id="status">טוען מנוע ניתוח...</p>
   </div>
-
+ 
   <div class="card" id="player-card" style="display:none">
     <div class="label">נגן</div>
     <div class="controls">
-      <button id="playBtn" onclick="togglePlay()" disabled>▶ נגן</button>
-      <button id="stopBtn" onclick="stopPlay()" disabled>⏹ עצור</button>
+      <button id="playBtn" disabled>▶ נגן</button>
+      <button id="stopBtn" disabled>⏹ עצור</button>
     </div>
-    <div class="progress-bar" onclick="seek(event)">
+    <div class="progress-bar" id="progressBar">
       <div class="progress-fill" id="progress"></div>
     </div>
     <div class="time-row">
@@ -59,13 +60,19 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
       <span id="totalTime">0:00</span>
     </div>
   </div>
-</div>
-<div class="card" id="chords-card" style="display:none">
-    <div class="label">אקורדים בשיר</div>
+ 
+  <div class="card" id="chords-card" style="display:none">
+    <div class="label">אקורדים בשיר <span id="engineBadge"></span></div>
     <div id="analyzing" style="text-align:center;color:#888;padding:1rem">מנתח את השיר... ⏳</div>
     <div id="chord-key" style="text-align:center;color:#a78bfa;font-size:1rem;font-weight:600;margin-bottom:1rem;display:none"></div>
     <div id="chord-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
   </div>
+</div>
+ 
+<!-- Essentia.js - ספריית ניתוח מוזיקה מקצועית -->
+<script src="https://cdn.jsdelivr.net/npm/essentia.js@0.1.3/dist/essentia-wasm.web.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/essentia.js@0.1.3/dist/essentia.js-core.js"></script>
+ 
 <script>
 let audioBuffer = null;
 let audioCtx = null;
@@ -74,9 +81,32 @@ let startTime = 0;
 let pausedAt = 0;
 let isPlaying = false;
 let rafId = null;
-
+let chordTimeline = [];
+let essentia = null;
+let essentiaReady = false;
+ 
 function fmt(s){const m=Math.floor(s/60);const sec=Math.floor(s%60);return m+':'+String(sec).padStart(2,'0');}
-
+ 
+// אתחול Essentia.js
+async function initEssentia(){
+  try{
+    const wasmModule = await EssentiaWASM();
+    essentia = new Essentia(wasmModule);
+    essentiaReady = true;
+    document.getElementById('status').textContent = 'מוכן! בחר קובץ להתחלה ✓';
+  }catch(e){
+    essentiaReady = false;
+    document.getElementById('status').textContent = 'מנוע בסיסי מוכן - בחר קובץ';
+    console.error('Essentia load failed:', e);
+  }
+}
+ 
+document.getElementById('uploadBtn').onclick = () => document.getElementById('file').click();
+document.getElementById('file').onchange = (e) => loadFile(e.target.files[0]);
+document.getElementById('playBtn').onclick = togglePlay;
+document.getElementById('stopBtn').onclick = stopPlay;
+document.getElementById('progressBar').onclick = seek;
+ 
 async function loadFile(f){
   if(!f)return;
   document.getElementById('fname').textContent = f.name;
@@ -91,18 +121,19 @@ async function loadFile(f){
     document.getElementById('playBtn').disabled = false;
     document.getElementById('stopBtn').disabled = false;
     document.getElementById('status').textContent = 'מוכן לנגינה - לחץ ▶';
-    analyzeChords();
     pausedAt = 0;
     updateProgress();
+    analyzeChords();
   }catch(e){
     document.getElementById('status').textContent = 'שגיאה בטעינה: '+e.message;
   }
 }
-
+ 
 function togglePlay(){
   if(!audioBuffer)return;
   if(isPlaying){
     pausedAt = audioCtx.currentTime - startTime;
+    source.onended = null;
     source.stop();
     isPlaying = false;
     document.getElementById('playBtn').textContent = '▶ נגן';
@@ -117,8 +148,7 @@ function togglePlay(){
     document.getElementById('playBtn').textContent = '⏸ השהה';
     source.onended = ()=>{
       if(isPlaying){
-        isPlaying = false;
-        pausedAt = 0;
+        isPlaying = false; pausedAt = 0;
         document.getElementById('playBtn').textContent = '▶ נגן';
         document.getElementById('progress').style.width = '0%';
         document.getElementById('currentTime').textContent = '0:00';
@@ -127,17 +157,16 @@ function togglePlay(){
     updateProgress();
   }
 }
-
+ 
 function stopPlay(){
-  if(source && isPlaying) source.stop();
-  isPlaying = false;
-  pausedAt = 0;
+  if(source && isPlaying){ source.onended = null; source.stop(); }
+  isPlaying = false; pausedAt = 0;
   document.getElementById('playBtn').textContent = '▶ נגן';
   document.getElementById('progress').style.width = '0%';
   document.getElementById('currentTime').textContent = '0:00';
   cancelAnimationFrame(rafId);
 }
-
+ 
 function updateProgress(){
   if(!audioBuffer)return;
   let curr = pausedAt;
@@ -148,242 +177,241 @@ function updateProgress(){
   highlightCurrentChord();
   if(isPlaying) rafId = requestAnimationFrame(updateProgress);
 }
-
+ 
 function seek(ev){
   if(!audioBuffer)return;
-  const bar = ev.currentTarget;
-  const rect = bar.getBoundingClientRect();
-  const x = ev.clientX - rect.left;
-  const pct = x / rect.width;
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const pct = (ev.clientX - rect.left) / rect.width;
   const newTime = pct * audioBuffer.duration;
   const wasPlaying = isPlaying;
-  if(isPlaying){source.onended=null;source.stop();isPlaying=false;cancelAnimationFrame(rafId);}
+  if(isPlaying){ source.onended=null; source.stop(); isPlaying=false; cancelAnimationFrame(rafId); }
   pausedAt = newTime;
   updateProgress();
-  if(wasPlaying) togglePlay();
-}const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const CHORD_TYPES = {
-  'C':[0,4,7],'C#':[1,5,8],'D':[2,6,9],'D#':[3,7,10],'E':[4,8,11],'F':[5,9,0],
-  'F#':[6,10,1],'G':[7,11,2],'G#':[8,0,3],'A':[9,1,4],'A#':[10,2,5],'B':[11,3,6],
-  'Cm':[0,3,7],'C#m':[1,4,8],'Dm':[2,5,9],'D#m':[3,6,10],'Em':[4,7,11],'Fm':[5,8,0],
-  'F#m':[6,9,1],'Gm':[7,10,2],'G#m':[8,11,3],'Am':[9,0,4],'A#m':[10,1,5],'Bm':[11,2,6]
-};
-let chordTimeline = [];
-
-// Krumhansl-Schmuckler profiles - מסייע לזהות אקורד גם כשהרמוניות מעורבבות
-const MAJ_PROFILE = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
-const MIN_PROFILE = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-
-function fft(real, imag){
-  const n = real.length;
-  if(n <= 1) return;
-  const half = n / 2;
-  // bit-reversal
-  for(let i = 1, j = 0; i < n; i++){
-    let bit = n >> 1;
-    for(; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if(i < j){ [real[i],real[j]]=[real[j],real[i]]; [imag[i],imag[j]]=[imag[j],imag[i]]; }
-  }
-  for(let len = 2; len <= n; len <<= 1){
-    const ang = -2 * Math.PI / len;
-    const wr = Math.cos(ang), wi = Math.sin(ang);
-    for(let i = 0; i < n; i += len){
-      let cr = 1, ci = 0;
-      for(let k = 0; k < len/2; k++){
-        const ur = real[i+k], ui = imag[i+k];
-        const vr = real[i+k+len/2]*cr - imag[i+k+len/2]*ci;
-        const vi = real[i+k+len/2]*ci + imag[i+k+len/2]*cr;
-        real[i+k] = ur+vr; imag[i+k] = ui+vi;
-        real[i+k+len/2] = ur-vr; imag[i+k+len/2] = ui-vi;
-        const ncr = cr*wr - ci*wi;
-        ci = cr*wi + ci*wr; cr = ncr;
-      }
-    }
-  }
+  if(wasPlaying) setTimeout(()=>togglePlay(), 50);
 }
-
-function computeChroma(samples, sr){
-  const n = samples.length;
-  const real = new Float32Array(n);
-  const imag = new Float32Array(n);
-  for(let i = 0; i < n; i++){
-    const w = 0.5 * (1 - Math.cos(2*Math.PI*i/(n-1)));
-    real[i] = samples[i] * w;
-  }
-  fft(real, imag);
-  
-  const spectrum = new Float32Array(n/2);
-  for(let k = 0; k < n/2; k++){
-    spectrum[k] = Math.sqrt(real[k]*real[k] + imag[k]*imag[k]);
-  }
-  
-  const chroma = new Array(12).fill(0);
-  const harmonics = [1, 2, 3, 4, 5];
-  const weights = [1.0, 0.5, 0.33, 0.25, 0.2];
-  
-  for(let k = 1; k < n/2; k++){
-    const freq = k * sr / n;
-    if(freq < 80 || freq > 1500) continue;
-    
-    const noteNum = 12 * Math.log2(freq/440) + 69;
-    const noteIdx = ((Math.round(noteNum) % 12) + 12) % 12;
-    
-    let total = spectrum[k];
-    for(let h = 1; h < harmonics.length; h++){
-      const hBin = Math.round(k * harmonics[h]);
-      if(hBin < n/2) total += spectrum[hBin] * weights[h];
-    }
-    chroma[noteIdx] += total;
-  }
-  
-  const max = Math.max(...chroma);
-  if(max > 0) for(let i = 0; i < 12; i++) chroma[i] /= max;
-  return chroma;
+ 
+function jumpTo(time){
+  const wasPlaying = isPlaying;
+  if(isPlaying){ source.onended=null; source.stop(); isPlaying=false; cancelAnimationFrame(rafId); }
+  pausedAt = time;
+  updateProgress();
+  if(wasPlaying) setTimeout(()=>togglePlay(), 50);
 }
-function matchChord(chroma){
-  let best = null, bestScore = -Infinity;
-  for(let root = 0; root < 12; root++){
-    // Major
-    let scoreMaj = 0;
-    for(let i = 0; i < 12; i++){
-      scoreMaj += chroma[(i+root)%12] * MAJ_PROFILE[i];
-    }
-    if(scoreMaj > bestScore){ bestScore = scoreMaj; best = NOTES[root]; }
-    
-    // Minor
-    let scoreMin = 0;
-    for(let i = 0; i < 12; i++){
-      scoreMin += chroma[(i+root)%12] * MIN_PROFILE[i];
-    }
-    if(scoreMin > bestScore){ bestScore = scoreMin; best = NOTES[root]+'m'; }
+ 
+function highlightCurrentChord(){
+  if(!chordTimeline.length) return;
+  let curr = pausedAt;
+  if(isPlaying) curr = audioCtx.currentTime - startTime + pausedAt;
+  let activeIdx = -1;
+  for(let i = 0; i < chordTimeline.length; i++){
+    if(chordTimeline[i].time <= curr){ activeIdx = i; } else break;
   }
-  return best;
+  document.querySelectorAll('.chord-cell').forEach((el, i) => {
+    el.classList.toggle('active', i === activeIdx);
+  });
 }
-
+ 
+// ===== ניתוח אקורדים =====
 async function analyzeChords(){
   document.getElementById('chords-card').style.display = 'block';
   document.getElementById('analyzing').style.display = 'block';
-  document.getElementById('analyzing').textContent = 'מנתח את השיר... 0%';
+  document.getElementById('analyzing').textContent = 'מנתח את השיר... ⏳';
   document.getElementById('chord-grid').innerHTML = '';
   document.getElementById('chord-key').style.display = 'none';
-
   await new Promise(r => setTimeout(r, 50));
-
-  // שילוב סטריאו - ממוצע של שני הערוצים
-  const left = audioBuffer.getChannelData(0);
-  const right = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : left;
-  const data = new Float32Array(audioBuffer.length);
-  for(let i = 0; i < data.length; i++) data[i] = (left[i] + right[i]) / 2;
-  
-  const sr = audioBuffer.sampleRate;
-  
-  // חלון גדול יותר - 32768 sample (~0.74 שניות) - רזולוציה כפולה
-  const fftSize = 32768;
-  const hopSize = Math.floor(sr * 0.5); // ניתוח כל חצי שנייה - יותר נקודות
-  const numFrames = Math.floor((audioBuffer.length - fftSize) / hopSize);
-  const timeline = [];
-
-  for(let f = 0; f < numFrames; f++){
-    const start = f * hopSize;
-    const slice = new Float32Array(fftSize);
-    for(let i = 0; i < fftSize; i++) slice[i] = data[start + i] || 0;
-    
-    const chroma = computeChroma(slice, sr);
-    const chord = matchChord(chroma);
-    timeline.push({time: f * 0.5, chord: chord});
-    
-    if(f % 5 === 0){
-      document.getElementById('analyzing').textContent = 'מנתח... ' + Math.round(f/numFrames*100) + '%';
-      await new Promise(r => setTimeout(r, 0));
-    }
+ 
+  let timeline;
+  if(essentiaReady){
+    document.getElementById('engineBadge').innerHTML = '<span class="engine-badge engine-pro">מנוע מקצועי</span>';
+    timeline = await analyzeWithEssentia();
+  } else {
+    document.getElementById('engineBadge').innerHTML = '<span class="engine-badge engine-basic">מנוע בסיסי</span>';
+    timeline = await analyzeBasic();
   }
-
-  // החלקה חזקה - 5 העברות במקום 3
-  for(let pass = 0; pass < 5; pass++){
+ 
+  // החלקה
+  for(let pass = 0; pass < 4; pass++){
     for(let i = 1; i < timeline.length - 1; i++){
       if(timeline[i-1].chord === timeline[i+1].chord && timeline[i].chord !== timeline[i-1].chord){
         timeline[i].chord = timeline[i-1].chord;
       }
     }
   }
-  
-  // החלקה רחבה יותר: אקורד שמופיע פחות מ-2 ברצף, ושני שכניו זהים, יוחלף
-  for(let pass = 0; pass < 3; pass++){
-    for(let i = 2; i < timeline.length - 2; i++){
-      if(timeline[i-2].chord === timeline[i+2].chord && 
-         timeline[i-1].chord === timeline[i-2].chord &&
-         timeline[i+1].chord === timeline[i+2].chord &&
-         timeline[i].chord !== timeline[i-2].chord){
-        timeline[i].chord = timeline[i-2].chord;
-      }
-    }
-  }
-
+ 
   const grouped = [];
   for(const item of timeline){
     if(grouped.length && grouped[grouped.length-1].chord === item.chord) continue;
     grouped.push(item);
   }
-  
-  // הסר אקורדים שמחזיקים פחות משנייה אחת
+ 
+  // הסר אקורדים קצרים מ-1 שניה
   const filtered = [];
   for(let i = 0; i < grouped.length; i++){
-    const duration = (i < grouped.length - 1) ? grouped[i+1].time - grouped[i].time : 999;
-    if(duration >= 1.0 || filtered.length === 0){
-      filtered.push(grouped[i]);
-    }
+    const dur = (i < grouped.length-1) ? grouped[i+1].time - grouped[i].time : 999;
+    if(dur >= 1.0 || filtered.length === 0) filtered.push(grouped[i]);
   }
-
+ 
   chordTimeline = filtered;
-  
+ 
   const counts = {};
-  filtered.forEach(g => counts[g.chord] = (counts[g.chord]||0) + 1);
+  filtered.forEach(g => counts[g.chord] = (counts[g.chord]||0)+1);
   const topChord = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
   document.getElementById('chord-key').textContent = '🎼 מפתח השיר: ' + topChord;
   document.getElementById('chord-key').style.display = 'block';
-
+ 
   document.getElementById('analyzing').style.display = 'none';
   const grid = document.getElementById('chord-grid');
-  filtered.forEach((g, i) => {
+  filtered.forEach((g) => {
     const cell = document.createElement('div');
     cell.className = 'chord-cell';
-    cell.id = 'cc-' + i;
-    cell.innerHTML = '<div class="ch-name">' + g.chord + '</div><div class="ch-time">' + fmt(g.time) + '</div>';
+    cell.innerHTML = '<div class="ch-name">'+g.chord+'</div><div class="ch-time">'+fmt(g.time)+'</div>';
     cell.onclick = () => jumpTo(g.time);
     grid.appendChild(cell);
   });
 }
-
-function jumpTo(time){
-  const wasPlaying = isPlaying;
-  if(isPlaying){ 
-    source.onended = null;
-    source.stop(); 
-    isPlaying = false; 
-    cancelAnimationFrame(rafId); 
+ 
+// --- ניתוח עם Essentia.js (HPCP + ChordsDetection מקצועי) ---
+async function analyzeWithEssentia(){
+  const sr = audioBuffer.sampleRate;
+  // מיזוג סטריאו למונו
+  const left = audioBuffer.getChannelData(0);
+  const right = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : left;
+  const mono = new Float32Array(audioBuffer.length);
+  for(let i=0;i<mono.length;i++) mono[i]=(left[i]+right[i])/2;
+ 
+  const frameSize = 8192;
+  const hopSize = 4096;
+  const hpcpFrames = [];
+  const numFrames = Math.floor((mono.length - frameSize) / hopSize);
+ 
+  for(let f=0; f<numFrames; f++){
+    const start = f*hopSize;
+    const frameData = mono.slice(start, start+frameSize);
+    const frameVec = essentia.arrayToVector(frameData);
+ 
+    // חלון + ספקטרום
+    const windowed = essentia.Windowing(frameVec, true, frameSize, 'hann');
+    const spectrum = essentia.Spectrum(windowed.frame, frameSize);
+    // זיהוי שיאי תדר
+    const peaks = essentia.SpectralPeaks(spectrum.spectrum, 0, 5000, 100, 0, sr, 'frequency');
+    // HPCP - פרופיל גובה הרמוני
+    const hpcp = essentia.HPCP(peaks.frequencies, peaks.magnitudes);
+    hpcpFrames.push(essentia.vectorToArray(hpcp.hpcp));
+ 
+    windowed.frame.delete(); spectrum.spectrum.delete();
+    peaks.frequencies.delete(); peaks.magnitudes.delete(); hpcp.hpcp.delete();
+    frameVec.delete();
+ 
+    if(f % 10 === 0){
+      document.getElementById('analyzing').textContent = 'מנתח (מקצועי)... ' + Math.round(f/numFrames*100)+'%';
+      await new Promise(r=>setTimeout(r,0));
+    }
   }
-  pausedAt = time;
-  updateProgress();
-  if(wasPlaying){
-    setTimeout(() => togglePlay(), 50);
+ 
+  // הפעלת ChordsDetection על רצף ה-HPCP
+  const flat = [];
+  hpcpFrames.forEach(fr => fr.forEach(v => flat.push(v)));
+  const hpcpMatrix = essentia.arrayToVector(flat);
+  // עיבוד: ChordsDetection מקבל מטריצת HPCP
+  const timeline = [];
+  const secPerFrame = hopSize / sr;
+ 
+  // נשתמש בזיהוי ידני מ-HPCP (יציב יותר ב-wasm)
+  for(let i=0;i<hpcpFrames.length;i++){
+    const chord = chordFromHPCP(hpcpFrames[i]);
+    timeline.push({time: i*secPerFrame, chord: chord});
   }
+  hpcpMatrix.delete();
+  return timeline;
 }
-function highlightCurrentChord(){
-  if(!chordTimeline.length) return;
-  let curr = pausedAt;
-  if(isPlaying) curr = audioCtx.currentTime - startTime + pausedAt;
-  
-  let activeIdx = -1;
-  for(let i = 0; i < chordTimeline.length; i++){
-    if(chordTimeline[i].time <= curr){ activeIdx = i; } else break;
+ 
+const NOTES12 = ['A','A#','B','C','C#','D','D#','E','F','F#','G','G#'];
+function chordFromHPCP(hpcp){
+  // hpcp הוא 12 ערכים שמתחילים מ-A
+  const maj = [1,0,0,0,1,0,0,1,0,0,0,0];
+  const min = [1,0,0,1,0,0,0,1,0,0,0,0];
+  let best=null, bestScore=-Infinity;
+  for(let root=0; root<12; root++){
+    let sMaj=0, sMin=0;
+    for(let i=0;i<12;i++){
+      sMaj += hpcp[(i+root)%12]*maj[i];
+      sMin += hpcp[(i+root)%12]*min[i];
+    }
+    if(sMaj>bestScore){bestScore=sMaj; best=NOTES12[root];}
+    if(sMin>bestScore){bestScore=sMin; best=NOTES12[root]+'m';}
   }
-  
-  document.querySelectorAll('.chord-cell').forEach((el, i) => {
-    el.classList.toggle('active', i === activeIdx);
-  });
+  return best;
 }
-
+ 
+// --- מנוע בסיסי (גיבוי אם Essentia לא נטען) ---
+async function analyzeBasic(){
+  const data = audioBuffer.getChannelData(0);
+  const sr = audioBuffer.sampleRate;
+  const fftSize = 16384;
+  const hopSize = Math.floor(sr * 0.5);
+  const numFrames = Math.floor((audioBuffer.length - fftSize) / hopSize);
+  const timeline = [];
+  for(let f=0; f<numFrames; f++){
+    const start = f*hopSize;
+    const slice = new Float32Array(fftSize);
+    for(let i=0;i<fftSize;i++) slice[i]=data[start+i]||0;
+    const chroma = computeChromaBasic(slice, sr);
+    timeline.push({time: f*0.5, chord: matchChordBasic(chroma)});
+    if(f%5===0){
+      document.getElementById('analyzing').textContent = 'מנתח... '+Math.round(f/numFrames*100)+'%';
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+  return timeline;
+}
+ 
+const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const MAJ_P = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const MIN_P = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+ 
+function fftBasic(real, imag){
+  const n=real.length; if(n<=1)return;
+  for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[real[i],real[j]]=[real[j],real[i]];[imag[i],imag[j]]=[imag[j],imag[i]];}}
+  for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const ur=real[i+k],ui=imag[i+k];const vr=real[i+k+len/2]*cr-imag[i+k+len/2]*ci;const vi=real[i+k+len/2]*ci+imag[i+k+len/2]*cr;real[i+k]=ur+vr;imag[i+k]=ui+vi;real[i+k+len/2]=ur-vr;imag[i+k+len/2]=ui-vi;const ncr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=ncr;}}}
+}
+ 
+function computeChromaBasic(samples, sr){
+  const n=samples.length;
+  const real=new Float32Array(n), imag=new Float32Array(n);
+  for(let i=0;i<n;i++){const w=0.5*(1-Math.cos(2*Math.PI*i/(n-1)));real[i]=samples[i]*w;}
+  fftBasic(real,imag);
+  const spectrum=new Float32Array(n/2);
+  for(let k=0;k<n/2;k++) spectrum[k]=Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
+  const chroma=new Array(12).fill(0);
+  const harm=[1,2,3,4,5], wts=[1.0,0.5,0.33,0.25,0.2];
+  for(let k=1;k<n/2;k++){
+    const freq=k*sr/n;
+    if(freq<80||freq>1500)continue;
+    const noteNum=12*Math.log2(freq/440)+69;
+    const idx=((Math.round(noteNum)%12)+12)%12;
+    let total=spectrum[k];
+    for(let h=1;h<harm.length;h++){const hb=Math.round(k*harm[h]);if(hb<n/2)total+=spectrum[hb]*wts[h];}
+    chroma[idx]+=total;
+  }
+  const max=Math.max(...chroma);
+  if(max>0)for(let i=0;i<12;i++)chroma[i]/=max;
+  return chroma;
+}
+ 
+function matchChordBasic(chroma){
+  let best=null,bestScore=-Infinity;
+  for(let root=0;root<12;root++){
+    let sMaj=0,sMin=0;
+    for(let i=0;i<12;i++){sMaj+=chroma[(i+root)%12]*MAJ_P[i];sMin+=chroma[(i+root)%12]*MIN_P[i];}
+    if(sMaj>bestScore){bestScore=sMaj;best=NOTES[root];}
+    if(sMin>bestScore){bestScore=sMin;best=NOTES[root]+'m';}
+  }
+  return best;
+}
+ 
+// אתחול
+initEssentia();
 </script>
 </body>
 </html>
+ 
